@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>订阅地址生成器</title>
+  <link rel="icon" href="data:," />
+  <script>
+    const savedTheme = localStorage.getItem('sub-url-generator-theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.classList.toggle('dark', savedTheme ? savedTheme === 'dark' : prefersDark);
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style type="text/tailwindcss">
+    @theme {
+      --font-sans: "Avenir Next", "Noto Sans SC", ui-sans-serif, system-ui, sans-serif;
+      --color-background: hsl(var(--background));
+      --color-foreground: hsl(var(--foreground));
+      --color-card: hsl(var(--card));
+      --color-card-foreground: hsl(var(--card-foreground));
+      --color-muted: hsl(var(--muted));
+      --color-muted-foreground: hsl(var(--muted-foreground));
+      --color-border: hsl(var(--border));
+      --color-input: hsl(var(--input));
+      --color-ring: hsl(var(--ring));
+      --color-primary: hsl(var(--primary));
+      --color-primary-foreground: hsl(var(--primary-foreground));
+      --color-secondary: hsl(var(--secondary));
+      --color-secondary-foreground: hsl(var(--secondary-foreground));
+      --color-destructive: hsl(var(--destructive));
+      --color-destructive-foreground: hsl(var(--destructive-foreground));
+    }
+  </style>
+  <style>
+    :root {
+      color-scheme: light;
+      --background: 0 0% 100%;
+      --foreground: 240 10% 3.9%;
+      --card: 0 0% 100%;
+      --card-foreground: 240 10% 3.9%;
+      --muted: 240 4.8% 95.9%;
+      --muted-foreground: 240 3.8% 46.1%;
+      --border: 240 5.9% 90%;
+      --input: 240 5.9% 90%;
+      --ring: 240 5.9% 10%;
+      --primary: 240 5.9% 10%;
+      --primary-foreground: 0 0% 98%;
+      --secondary: 240 4.8% 95.9%;
+      --secondary-foreground: 240 5.9% 10%;
+      --destructive: 0 84.2% 60.2%;
+      --destructive-foreground: 0 0% 98%;
+    }
+
+    .dark {
+      color-scheme: dark;
+      --background: 240 10% 3.9%;
+      --foreground: 0 0% 98%;
+      --card: 240 10% 3.9%;
+      --card-foreground: 0 0% 98%;
+      --muted: 240 3.7% 15.9%;
+      --muted-foreground: 240 5% 64.9%;
+      --border: 240 3.7% 15.9%;
+      --input: 240 3.7% 15.9%;
+      --ring: 240 4.9% 83.9%;
+      --primary: 0 0% 98%;
+      --primary-foreground: 240 5.9% 10%;
+      --secondary: 240 3.7% 15.9%;
+      --secondary-foreground: 0 0% 98%;
+      --destructive: 0 62.8% 30.6%;
+      --destructive-foreground: 0 0% 98%;
+    }
+
+    body {
+      background:
+        linear-gradient(90deg, hsl(var(--border) / 0.42) 1px, transparent 1px),
+        linear-gradient(hsl(var(--border) / 0.36) 1px, transparent 1px),
+        hsl(var(--background));
+      background-size: 32px 32px;
+    }
+
+    textarea,
+    input,
+    select {
+      outline: none;
+    }
+
+    textarea:focus,
+    input:focus,
+    select:focus {
+      box-shadow: 0 0 0 3px hsl(var(--ring) / 0.16);
+      border-color: hsl(var(--ring));
+    }
+  </style>
+</head>
+<body class="min-h-screen overflow-x-hidden text-foreground antialiased">
+  <main class="mx-auto grid min-h-screen w-full max-w-[1500px] grid-cols-1 gap-5 px-4 py-5 md:px-6 lg:grid-cols-[240px_minmax(0,1fr)] lg:px-8">
+    <aside class="border-border bg-card flex flex-col justify-between rounded-lg border p-5 shadow-sm md:min-h-[calc(100vh-40px)]">
+      <div>
+        <div class="flex items-center justify-between gap-3">
+          <p class="text-muted-foreground text-xs font-bold uppercase tracking-[0.18em]">Subconverter</p>
+          <button id="themeToggle" type="button" class="border-border bg-secondary text-secondary-foreground min-h-9 rounded-md border px-3 text-xs font-bold transition hover:bg-primary hover:text-primary-foreground" aria-label="切换明暗模式">
+            <span id="themeLabel">夜间</span>
+          </button>
+        </div>
+        <h1 class="mt-3 text-3xl font-black leading-none tracking-normal md:text-4xl">订阅地址合并器</h1>
+        <p class="text-muted-foreground mt-4 text-sm leading-6">输入一个或多个订阅链接，选择目标客户端和配置文件，生成可直接使用的转换订阅地址。</p>
+      </div>
+
+      <div class="text-muted-foreground mt-8 space-y-3 text-xs">
+        <div class="border-border border-t pt-4">
+          <p class="text-foreground font-bold">支持配置</p>
+          <p class="mt-2 leading-5">默认远程配置、自定义远程 .ini、或不传 config 参数。多个订阅会用 <code class="bg-muted text-foreground rounded px-1">|</code> 合并。</p>
+        </div>
+      </div>
+    </aside>
+
+    <section class="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_300px] 2xl:grid-cols-[minmax(0,1fr)_320px]">
+      <form id="generatorForm" class="border-border bg-card min-w-0 rounded-lg border p-4 shadow-sm md:p-6">
+        <div class="grid gap-5">
+          <div>
+            <label for="urls" class="text-sm font-bold">订阅地址</label>
+            <textarea id="urls" rows="9" class="border-input bg-background mt-2 w-full min-w-0 resize-y rounded-md border p-3 font-mono text-sm leading-6" placeholder="https://example.com/sub/abc&#10;https://example.com/sub/def"></textarea>
+            <p class="text-muted-foreground mt-2 text-xs">支持换行、空格、英文逗号或 | 分隔。</p>
+          </div>
+
+          <div class="grid gap-4 md:grid-cols-2">
+            <div>
+              <label for="target" class="text-sm font-bold">目标配置</label>
+              <select id="target" class="border-input bg-background mt-2 h-11 w-full rounded-md border px-3 text-sm">
+                <option value="clash">Clash</option>
+                <option value="clashr">ClashR</option>
+                <option value="singbox">sing-box</option>
+                <option value="surge&amp;ver=4">Surge 4</option>
+                <option value="surge&amp;ver=3">Surge 3</option>
+                <option value="surge&amp;ver=2">Surge 2</option>
+                <option value="quan">Quantumult</option>
+                <option value="quanx">Quantumult X</option>
+                <option value="loon">Loon</option>
+                <option value="surfboard">Surfboard</option>
+                <option value="mellow">Mellow</option>
+                <option value="ss">SS</option>
+                <option value="ssr">SSR</option>
+                <option value="v2ray">V2Ray</option>
+                <option value="trojan">Trojan</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="backend" class="text-sm font-bold">后端地址</label>
+              <input id="backend" class="border-input bg-background mt-2 h-11 w-full min-w-0 rounded-md border px-3 font-mono text-sm" value="http://204.152.192.224:25500" />
+            </div>
+          </div>
+
+          <div class="grid gap-4 md:grid-cols-[220px_minmax(0,1fr)]">
+            <div>
+              <label for="configMode" class="text-sm font-bold">配置选择</label>
+              <select id="configMode" class="border-input bg-background mt-2 h-11 w-full rounded-md border px-3 text-sm">
+                <option value="default">默认 tist.ini</option>
+                <option value="custom">自定义远程配置</option>
+                <option value="none">不使用远程配置</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="configUrl" class="text-sm font-bold">配置 URL</label>
+              <input id="configUrl" class="border-input bg-background mt-2 h-11 w-full min-w-0 rounded-md border px-3 font-mono text-sm" value="https://raw.githubusercontent.com/hkuc/public/main/tist.ini" />
+            </div>
+          </div>
+
+          <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <label class="border-border bg-background hover:border-ring flex min-h-16 min-w-0 items-center justify-between gap-3 rounded-md border px-3 py-2 transition">
+              <span class="min-w-0">
+                <span class="block text-sm font-bold leading-5">插入信息</span>
+                <span class="text-muted-foreground block break-all font-mono text-[11px] leading-4">insert</span>
+              </span>
+              <input id="insert" type="checkbox" class="h-5 w-5 shrink-0 accent-primary" />
+            </label>
+            <label class="border-border bg-background hover:border-ring flex min-h-16 min-w-0 items-center justify-between gap-3 rounded-md border px-3 py-2 transition">
+              <span class="min-w-0">
+                <span class="block text-sm font-bold leading-5">上传缓存</span>
+                <span class="text-muted-foreground block break-all font-mono text-[11px] leading-4">upload</span>
+              </span>
+              <input id="upload" type="checkbox" class="h-5 w-5 shrink-0 accent-primary" checked />
+            </label>
+            <label class="border-border bg-background hover:border-ring flex min-h-16 min-w-0 items-center justify-between gap-3 rounded-md border px-3 py-2 transition">
+              <span class="min-w-0">
+                <span class="block text-sm font-bold leading-5">启用 UDP</span>
+                <span class="text-muted-foreground block break-all font-mono text-[11px] leading-4">udp</span>
+              </span>
+              <input id="udp" type="checkbox" class="h-5 w-5 shrink-0 accent-primary" checked />
+            </label>
+            <label class="border-border bg-background hover:border-ring flex min-h-16 min-w-0 items-center justify-between gap-3 rounded-md border px-3 py-2 transition">
+              <span class="min-w-0">
+                <span class="block text-sm font-bold leading-5">去除表情</span>
+                <span class="text-muted-foreground block break-all font-mono text-[11px] leading-4">remove_emoji</span>
+              </span>
+              <input id="removeEmoji" type="checkbox" class="h-5 w-5 shrink-0 accent-primary" />
+            </label>
+          </div>
+
+          <div class="flex flex-col gap-3 sm:flex-row">
+            <button type="submit" class="bg-primary text-primary-foreground min-h-11 flex-1 rounded-md px-5 text-sm font-black transition hover:opacity-90">生成订阅地址</button>
+            <button id="saveDefaults" type="button" class="border-border bg-background hover:bg-secondary hover:text-secondary-foreground min-h-11 rounded-md border px-5 text-sm font-bold transition">保存为默认</button>
+            <button id="clearDefaults" type="button" class="border-border bg-background hover:bg-destructive hover:text-destructive-foreground min-h-11 rounded-md border px-5 text-sm font-bold transition">清除默认</button>
+          </div>
+        </div>
+      </form>
+
+      <aside class="grid min-w-0 gap-4">
+        <section class="border-border bg-card rounded-lg border p-4 shadow-sm">
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="text-sm font-black">生成结果</h2>
+            <button id="copyResult" type="button" class="border-border bg-background hover:bg-primary hover:text-primary-foreground rounded-md border px-3 py-2 text-xs font-bold transition">复制</button>
+          </div>
+          <textarea id="result" rows="10" readonly class="border-input bg-background mt-3 w-full min-w-0 resize-y rounded-md border p-3 font-mono text-xs leading-5" placeholder="生成后的链接会显示在这里"></textarea>
+          <a id="openResult" href="#" target="_blank" rel="noopener noreferrer" class="bg-primary text-primary-foreground pointer-events-none mt-3 block rounded-md border border-primary px-4 py-3 text-center text-sm font-black opacity-50">打开生成链接</a>
+          <p id="message" class="text-destructive mt-3 min-h-5 text-xs font-bold"></p>
+        </section>
+
+        <section class="border-border bg-card rounded-lg border p-4 shadow-sm">
+          <h2 class="text-sm font-black">可用配置方式</h2>
+          <div class="text-muted-foreground mt-3 space-y-3 text-xs leading-5">
+            <p><strong class="text-foreground">默认 tist.ini：</strong>使用你给定的 <code class="bg-muted text-foreground rounded px-1 break-all">https://raw.githubusercontent.com/hkuc/public/main/tist.ini</code>。</p>
+            <p><strong class="text-foreground">自定义远程配置：</strong>填入任意 subconverter 外部配置 .ini 地址，会作为 <code class="bg-muted text-foreground rounded px-1 break-all">config=</code> 传给后端。</p>
+            <p><strong class="text-foreground">不使用远程配置：</strong>不附加 <code class="bg-muted text-foreground rounded px-1 break-all">config</code> 参数，使用后端自身默认设置。</p>
+          </div>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const defaultConfig = 'https://raw.githubusercontent.com/hkuc/public/main/tist.ini';
+    const storageKey = 'sub-url-generator-defaults';
+
+    const fields = {
+      urls: document.getElementById('urls'),
+      target: document.getElementById('target'),
+      backend: document.getElementById('backend'),
+      configMode: document.getElementById('configMode'),
+      configUrl: document.getElementById('configUrl'),
+      insert: document.getElementById('insert'),
+      upload: document.getElementById('upload'),
+      udp: document.getElementById('udp'),
+      removeEmoji: document.getElementById('removeEmoji'),
+      result: document.getElementById('result'),
+      message: document.getElementById('message'),
+      openResult: document.getElementById('openResult'),
+      themeToggle: document.getElementById('themeToggle'),
+      themeLabel: document.getElementById('themeLabel')
+    };
+
+    function normalizeBackend(backend) {
+      return backend.trim().replace(/\/+$/, '');
+    }
+
+    function parseUrls(value) {
+      return value
+        .split(/[\n\r,|\s]+/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+
+    function getSelectedConfig() {
+      if (fields.configMode.value === 'none') {
+        return '';
+      }
+
+      if (fields.configMode.value === 'default') {
+        return defaultConfig;
+      }
+
+      return fields.configUrl.value.trim();
+    }
+
+    function generateSubUrl(
+      urls,
+      target = 'clash',
+      backend = 'http://204.152.192.224:25500',
+      config = defaultConfig,
+      options = {}
+    ) {
+      const combinedUrls = urls.join('|');
+      const params = [
+        `target=${target}`,
+        `url=${encodeURIComponent(combinedUrls)}`,
+        `insert=${options.insert ? 'true' : 'false'}`,
+        `upload=${options.upload === false ? 'false' : 'true'}`,
+        `udp=${options.udp === false ? 'false' : 'true'}`,
+        `remove_emoji=${options.removeEmoji ? 'true' : 'false'}`
+      ];
+
+      if (config) {
+        params.push(`config=${encodeURIComponent(config)}`);
+      }
+
+      return `${normalizeBackend(backend)}/sub?${params.join('&')}`;
+    }
+
+    function collectState() {
+      return {
+        urls: fields.urls.value.trim(),
+        target: fields.target.value,
+        backend: fields.backend.value.trim(),
+        configMode: fields.configMode.value,
+        configUrl: fields.configUrl.value.trim(),
+        insert: fields.insert.checked,
+        upload: fields.upload.checked,
+        udp: fields.udp.checked,
+        removeEmoji: fields.removeEmoji.checked
+      };
+    }
+
+    function applyState(state) {
+      if (!state) {
+        return;
+      }
+
+      fields.urls.value = state.urls || '';
+      fields.target.value = state.target || 'clash';
+      fields.backend.value = state.backend || 'http://204.152.192.224:25500';
+      fields.configMode.value = state.configMode || 'default';
+      fields.configUrl.value = state.configUrl || defaultConfig;
+      fields.insert.checked = Boolean(state.insert);
+      fields.upload.checked = state.upload !== false;
+      fields.udp.checked = state.udp !== false;
+      fields.removeEmoji.checked = Boolean(state.removeEmoji);
+      syncConfigInput();
+    }
+
+    function syncConfigInput() {
+      const disabled = fields.configMode.value !== 'custom';
+      fields.configUrl.disabled = disabled;
+      fields.configUrl.classList.toggle('opacity-60', disabled);
+
+      if (fields.configMode.value === 'default') {
+        fields.configUrl.value = defaultConfig;
+      }
+    }
+
+    function setResult(url) {
+      fields.result.value = url;
+      fields.openResult.href = url || '#';
+      fields.openResult.classList.toggle('pointer-events-none', !url);
+      fields.openResult.classList.toggle('opacity-50', !url);
+    }
+
+    function showMessage(text, tone = 'warn') {
+      fields.message.textContent = text;
+      fields.message.className = `mt-3 min-h-5 text-xs font-bold ${tone === 'ok' ? 'text-muted-foreground' : 'text-destructive'}`;
+    }
+
+    function syncThemeToggle() {
+      const isDark = document.documentElement.classList.contains('dark');
+      fields.themeLabel.textContent = isDark ? '白天' : '夜间';
+      fields.themeToggle.setAttribute('aria-pressed', String(isDark));
+    }
+
+    fields.themeToggle.addEventListener('click', () => {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem('sub-url-generator-theme', isDark ? 'dark' : 'light');
+      syncThemeToggle();
+    });
+
+    document.getElementById('generatorForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+
+      const urls = parseUrls(fields.urls.value);
+      const backend = fields.backend.value.trim();
+      const config = getSelectedConfig();
+
+      if (!urls.length) {
+        setResult('');
+        showMessage('请至少输入一个订阅地址。');
+        return;
+      }
+
+      if (!backend) {
+        setResult('');
+        showMessage('请填写后端地址。');
+        return;
+      }
+
+      if (fields.configMode.value === 'custom' && !config) {
+        setResult('');
+        showMessage('请选择默认配置或填写自定义配置 URL。');
+        return;
+      }
+
+      const url = generateSubUrl(urls, fields.target.value, backend, config, {
+        insert: fields.insert.checked,
+        upload: fields.upload.checked,
+        udp: fields.udp.checked,
+        removeEmoji: fields.removeEmoji.checked
+      });
+
+      setResult(url);
+      showMessage(`已生成，合并 ${urls.length} 个订阅地址。`, 'ok');
+    });
+
+    document.getElementById('saveDefaults').addEventListener('click', () => {
+      localStorage.setItem(storageKey, JSON.stringify(collectState()));
+      showMessage('已保存为当前浏览器默认设置。', 'ok');
+    });
+
+    document.getElementById('clearDefaults').addEventListener('click', () => {
+      localStorage.removeItem(storageKey);
+      applyState({
+        urls: '',
+        target: 'clash',
+        backend: 'http://204.152.192.224:25500',
+        configMode: 'default',
+        configUrl: defaultConfig,
+        upload: true,
+        udp: true
+      });
+      setResult('');
+      showMessage('默认设置已清除。', 'ok');
+    });
+
+    document.getElementById('copyResult').addEventListener('click', async () => {
+      if (!fields.result.value) {
+        showMessage('没有可复制的生成结果。');
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(fields.result.value);
+        showMessage('已复制到剪贴板。', 'ok');
+      } catch (error) {
+        fields.result.select();
+        document.execCommand('copy');
+        showMessage('已选中并尝试复制结果。', 'ok');
+      }
+    });
+
+    fields.configMode.addEventListener('change', syncConfigInput);
+
+    try {
+      const savedState = JSON.parse(localStorage.getItem(storageKey));
+      applyState(savedState);
+    } catch (error) {
+      applyState(null);
+    }
+
+    syncConfigInput();
+    syncThemeToggle();
+  </script>
+</body>
+</html>

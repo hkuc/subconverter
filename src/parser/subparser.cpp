@@ -940,6 +940,70 @@ void explodeTrojan(std::string trojan, Proxy &node)
     trojanConstruct(node, group, remark, server, port, psk, network, host, path, true, tribool(), tfo, scv);
 }
 
+void explodeVless(std::string vless, Proxy &node)
+{
+    std::string server, port, id, addition, group, remark;
+    std::string net = "tcp", path, host, sni, flow, fingerprint, public_key, short_id, spider_x;
+    std::string security;
+    tribool udp, tfo, scv;
+    vless.erase(0, 8);
+    string_size pos = vless.rfind('#');
+
+    if(pos != std::string::npos)
+    {
+        remark = urlDecode(vless.substr(pos + 1));
+        vless.erase(pos);
+    }
+    pos = vless.find('?');
+    if(pos != std::string::npos)
+    {
+        addition = vless.substr(pos + 1);
+        vless.erase(pos);
+    }
+
+    if(regGetMatch(vless, "(.*?)@(.*):(.*)", 4, 0, &id, &server, &port))
+        return;
+    if(port == "0")
+        return;
+
+    net = getUrlArg(addition, "type");
+    if(net.empty())
+        net = "tcp";
+    path = urlDecode(getUrlArg(addition, "path"));
+    host = getUrlArg(addition, "host");
+    sni = getUrlArg(addition, "sni");
+    if(sni.empty())
+        sni = getUrlArg(addition, "peer");
+    flow = getUrlArg(addition, "flow");
+    fingerprint = getUrlArg(addition, "fp");
+    if(fingerprint.empty())
+        fingerprint = getUrlArg(addition, "fingerprint");
+    public_key = getUrlArg(addition, "pbk");
+    if(public_key.empty())
+        public_key = getUrlArg(addition, "public-key");
+    short_id = getUrlArg(addition, "sid");
+    if(short_id.empty())
+        short_id = getUrlArg(addition, "short-id");
+    spider_x = getUrlArg(addition, "spx");
+    if(spider_x.empty())
+        spider_x = getUrlArg(addition, "spider-x");
+
+    security = getUrlArg(addition, "security");
+    udp = getUrlArg(addition, "udp");
+    tfo = getUrlArg(addition, "tfo");
+    scv = getUrlArg(addition, "allowInsecure");
+    if(scv == tribool())
+        scv = getUrlArg(addition, "insecure");
+    group = urlDecode(getUrlArg(addition, "group"));
+
+    if(remark.empty())
+        remark = server + ":" + port;
+    if(group.empty())
+        group = V2RAY_DEFAULT_GROUP;
+
+    vlessConstruct(node, group, remark, server, port, id, net, path, host, sni, flow, fingerprint, public_key, short_id, spider_x, security == "tls" || security == "reality", udp, tfo, scv);
+}
+
 void explodeQuan(const std::string &quan, Proxy &node)
 {
     std::string strTemp, itemName, itemVal;
@@ -2522,6 +2586,8 @@ void explode(const std::string &link, Proxy &node)
         explodeNetch(link, node);
     else if(startsWith(link, "trojan://"))
         explodeTrojan(link, node);
+    else if(startsWith(link, "vless://"))
+        explodeVless(link, node);
     else if (strFind(link, "hysteria2://") || strFind(link, "hy2://"))
         explodeHysteria2(link, node);
     else if(isLink(link))

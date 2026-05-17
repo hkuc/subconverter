@@ -86,6 +86,7 @@ void hysteria2Construct(
 void explodeVmess(std::string vmess, Proxy &node);
 void explodeSSR(std::string ssr, Proxy &node);
 void explodeSS(std::string ss, Proxy &node);
+void explodeVless(std::string vless, Proxy &node);
 void explodeTrojan(std::string trojan, Proxy &node);
 void explodeQuan(const std::string &quan, Proxy &node);
 void explodeStdVMess(std::string vmess, Proxy &node);
