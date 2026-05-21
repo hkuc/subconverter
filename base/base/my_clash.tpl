@@ -1,7 +1,7 @@
 port: 7890
 socks-port: 7891
 allow-lan: true
-mode: Rule
+mode: rule
 log-level: info
 external-controller: "127.0.0.1:9090"
 ipv6: false
@@ -10,6 +10,7 @@ dns:
   enable: true
   ipv6: false
   listen: 0.0.0.0:53
+  enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
   use-hosts: true
   fake-ip-filter:
@@ -22,22 +23,43 @@ dns:
     - localhost.ptlogin2.qq.com
     - "*.msftncsi.com"
     - www.msftconnecttest.com
+    - "+.music.163.com"
+    - "+.music.126.net"
+    - "+.stun.*.*"
+    - "+.stun.*.*.*"
+    - "+.stun.*.*.*.*"
+    - "+.gvt1.com"
+    - "+.cloudflareclient.com"
   default-nameserver:
-    - 119.29.29.29
     - 223.5.5.5
+    - 119.29.29.29
   nameserver:
-    - 119.29.29.29
     - 223.5.5.5
+    - 119.29.29.29
   nameserver-policy:
-    "geosite:cn":
-      - 119.29.29.29
-      - 223.5.5.5
-    "geosite:geolocation-!cn":
+    "dns.google":
+      - 8.8.8.8
+      - 8.8.4.4
+    "cloudflare-dns.com":
+      - 1.1.1.1
+      - 1.0.0.1
+    "geosite:cloudflare":
+      - https://1.0.0.1/dns-query
       - tls://1.0.0.1:853
+    "*.cloudflare.com":
+      - https://1.0.0.1/dns-query
+      - tls://1.0.0.1:853
+    "geosite:cn":
+      - 223.5.5.5
+      - 119.29.29.29
+    "geosite:geolocation-!cn":
+      - https://1.0.0.1/dns-query
+      - tls://1.0.0.1:853
+      - https://dns.google/dns-query
       - tls://dns.google:853
   proxy-server-nameserver:
-    - 119.29.29.29
     - 223.5.5.5
+    - 119.29.29.29
   fallback:
     - 8.8.8.8
     - 1.1.1.1
