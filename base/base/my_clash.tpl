@@ -23,13 +23,13 @@ dns:
     - localhost.ptlogin2.qq.com
     - "*.msftncsi.com"
     - www.msftconnecttest.com
-    - "+.music.163.com"
-    - "+.music.126.net"
-    - "+.stun.*.*"
-    - "+.stun.*.*.*"
-    - "+.stun.*.*.*.*"
-    - "+.gvt1.com"
-    - "+.cloudflareclient.com"
+    - +.music.163.com
+    - +.music.126.net
+    - +.stun.*.*
+    - +.stun.*.*.*
+    - +.stun.*.*.*.*
+    - +.gvt1.com
+    - +.cloudflareclient.com
   default-nameserver:
     - 223.5.5.5
     - 119.29.29.29
@@ -52,19 +52,15 @@ dns:
     "geosite:cn":
       - 223.5.5.5
       - 119.29.29.29
-    "geosite:geolocation-!cn":
-      - https://1.0.0.1/dns-query
-      - tls://1.0.0.1:853
-      - https://dns.google/dns-query
-      - tls://dns.google:853
+      - 223.5.5.5
+    "dns.google": [223.5.5.5, 119.29.29.29]
+    "cloudflare-dns.com": [223.5.5.5, 119.29.29.29]
   proxy-server-nameserver:
     - 223.5.5.5
     - 119.29.29.29
   fallback:
-    - 8.8.8.8
-    - 1.1.1.1
-    - tls://1.0.0.1:853
-    - tls://dns.google:853
+    - https://1.0.0.1/dns-query
+    - https://dns.google/dns-query
   fallback-filter:
     geoip: true
     geoip-code: CN
