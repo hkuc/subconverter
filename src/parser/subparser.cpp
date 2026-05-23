@@ -250,8 +250,26 @@ void hysteria2Construct(
     const std::string &underlying_proxy
 ) {
     commonConstruct(node, ProxyType::Hysteria2, group, remarks, server, port, tribool(), tfo, scv, tribool(), underlying_proxy);
-    node.UpSpeed = to_int(up);
-    node.DownSpeed = to_int(down);
+    if (!up.empty())
+    {
+        if (up.length() > 4 && up.find("bps") == up.length() - 3)
+            node.Up = up;
+        else if (to_int(up))
+        {
+            node.UpSpeed = to_int(up);
+            node.Up = up + " Mbps";
+        }
+    }
+    if (!down.empty())
+    {
+        if (down.length() > 4 && down.find("bps") == down.length() - 3)
+            node.Down = down;
+        else if (to_int(down))
+        {
+            node.DownSpeed = to_int(down);
+            node.Down = down + " Mbps";
+        }
+    }
     node.Ports = ports;
     node.Password = password;
     node.OBFS = obfs;
@@ -1491,7 +1509,7 @@ void explodeClash(Node yamlnode, std::vector<Proxy> &nodes)
             singleproxy["cwnd"] >>= cwnd;
             singleproxy["hop-interval"] >>= hop_interval;
 
-            hysteria2Construct(node, group, ps, server, port, ports, up, down, password, obfs, obfs_password, sni, fingerprint, ca, ca_str, cwnd, alpn, hop_interval, tfo, scv, underlying_proxy);
+            hysteria2Construct(node, group, ps, server, port, ports, up, down, password, obfs, obfs_password, sni, fingerprint, alpn, ca, ca_str, cwnd, hop_interval, tfo, scv, underlying_proxy);
             break;
 
         default:

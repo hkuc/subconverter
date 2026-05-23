@@ -37,22 +37,6 @@ dns:
     - 223.5.5.5
     - 119.29.29.29
   nameserver-policy:
-    "dns.google":
-      - 8.8.8.8
-      - 8.8.4.4
-    "cloudflare-dns.com":
-      - 1.1.1.1
-      - 1.0.0.1
-    "geosite:cloudflare":
-      - https://1.0.0.1/dns-query
-      - tls://1.0.0.1:853
-    "*.cloudflare.com":
-      - https://1.0.0.1/dns-query
-      - tls://1.0.0.1:853
-    "geosite:cn":
-      - 223.5.5.5
-      - 119.29.29.29
-      - 223.5.5.5
     "dns.google": [223.5.5.5, 119.29.29.29]
     "cloudflare-dns.com": [223.5.5.5, 119.29.29.29]
   proxy-server-nameserver:

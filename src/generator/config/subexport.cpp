@@ -579,8 +579,12 @@ void proxyToClash(std::vector<Proxy> &nodes, YAML::Node &yamlnode, const ProxyGr
             if (!x.Ports.empty())
                 singleproxy["ports"] = x.Ports;
             if (!x.Up.empty())
+                singleproxy["up"] = x.Up;
+            else if (x.UpSpeed)
                 singleproxy["up"] = x.UpSpeed;
             if (!x.Down.empty())
+                singleproxy["down"] = x.Down;
+            else if (x.DownSpeed)
                 singleproxy["down"] = x.DownSpeed;
             if (!x.Password.empty())
                 singleproxy["password"] = x.Password;
@@ -592,6 +596,8 @@ void proxyToClash(std::vector<Proxy> &nodes, YAML::Node &yamlnode, const ProxyGr
                 singleproxy["sni"] = x.SNI;
             if (!scv.is_undef())
                 singleproxy["skip-cert-verify"] = scv.get();
+            if (!x.Fingerprint.empty())
+                singleproxy["fingerprint"] = x.Fingerprint;
             if (!x.Alpn.empty())
                 singleproxy["alpn"] = x.Alpn;
             if (!x.Ca.empty())
