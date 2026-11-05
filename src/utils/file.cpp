@@ -1,6 +1,11 @@
 #include <string>
 #include <fstream>
 #include <sys/stat.h>
+#include <cstdio>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 #include "utils/string.h"
 
@@ -107,4 +112,30 @@ int fileWrite(const std::string &path, const std::string &content, bool overwrit
     std::fwrite(content.c_str(), 1, content.size(), fp);
     std::fclose(fp);
     return 0;
+}
+
+int fileWriteAtomic(const std::string &path, const std::string &content)
+{
+    const std::string temporary = path + ".tmp." + randomStr(12);
+    std::FILE *fp = std::fopen(temporary.c_str(), "wb");
+    if(!fp)
+        return -1;
+
+    bool ok = std::fwrite(content.data(), 1, content.size(), fp) == content.size();
+    if(std::fflush(fp) != 0)
+        ok = false;
+    if(std::fclose(fp) != 0)
+        ok = false;
+
+    if(ok)
+    {
+#ifdef _WIN32
+        ok = MoveFileExA(temporary.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING) != 0;
+#else
+        ok = std::rename(temporary.c_str(), path.c_str()) == 0;
+#endif
+    }
+    if(!ok)
+        std::remove(temporary.c_str());
+    return ok ? 0 : -1;
 }
