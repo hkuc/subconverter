@@ -33,6 +33,7 @@ struct FetchResult
     std::string *content = nullptr;
     std::string *response_headers = nullptr;
     std::string *cookies = nullptr;
+    bool complete = false;
 };
 
 int webGet(const FetchArgument& argument, FetchResult &result);

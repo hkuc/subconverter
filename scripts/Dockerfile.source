@@ -1,0 +1,44 @@
+# Build the checked-out source rather than downloading a precompiled release.
+FROM alpine:3.20 AS builder
+ARG THREADS=2
+RUN apk add --no-cache g++ build-base linux-headers cmake python3 git \
+    curl-dev rapidjson-dev pcre2-dev yaml-cpp-dev
+WORKDIR /deps
+RUN git clone https://github.com/ftk/quickjspp quickjspp \
+    && cd quickjspp \
+    && git checkout 0c00c48895919fc02da3f191a2da06addeb07f09 \
+    && git submodule update --init --recursive \
+    && cmake -DCMAKE_BUILD_TYPE=Release . \
+    && make quickjs -j${THREADS} \
+    && install -d /usr/lib/quickjs /usr/include/quickjs \
+    && install -m644 quickjs/libquickjs.a /usr/lib/quickjs/ \
+    && install -m644 quickjs/quickjs.h quickjs/quickjs-libc.h /usr/include/quickjs/ \
+    && install -m644 quickjspp.hpp /usr/include/
+RUN git clone https://github.com/PerMalmberg/libcron libcron \
+    && cd libcron \
+    && git checkout aa3d4368d59abb9d51199755df7419194bc3e42e \
+    && git submodule update --init --recursive \
+    && cmake -DCMAKE_BUILD_TYPE=Release . \
+    && make libcron -j${THREADS} \
+    && install -m644 libcron/out/Release/liblibcron.a /usr/lib/ \
+    && install -d /usr/include/libcron /usr/include/date \
+    && install -m644 libcron/include/libcron/* /usr/include/libcron/ \
+    && install -m644 libcron/externals/date/include/date/* /usr/include/date/
+RUN git clone --branch v4.3.0 --depth=1 https://github.com/ToruNiina/toml11 toml11 \
+    && cd toml11 && cmake . && make install
+WORKDIR /src
+COPY . .
+RUN cmake -S tests -B /tmp/regression -DCMAKE_BUILD_TYPE=Debug \
+    && cmake --build /tmp/regression -j${THREADS} \
+    && ctest --test-dir /tmp/regression --output-on-failure \
+    && cmake -S . -B /tmp/build -DCMAKE_BUILD_TYPE=Release \
+    && cmake --build /tmp/build -j${THREADS}
+
+FROM alpine:3.20
+RUN apk add --no-cache libstdc++ pcre2 libcurl yaml-cpp
+COPY --from=builder /tmp/build/subconverter /usr/local/bin/subconverter
+COPY --from=builder /src/base /base/
+RUN cp /base/pref.example.toml /base/pref.toml
+WORKDIR /base
+EXPOSE 25500
+CMD ["/usr/local/bin/subconverter", "-f", "/base/pref.toml"]

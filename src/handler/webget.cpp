@@ -4,6 +4,7 @@
 //#include <mutex>
 #include <thread>
 #include <atomic>
+#include <mutex>
 
 #include <curl/curl.h>
 
@@ -40,28 +41,27 @@ struct curl_progress_data
 
 static inline void curl_init()
 {
-    static bool init = false;
-    if(!init)
-    {
+    static std::once_flag init;
+    std::call_once(init, []() {
         curl_global_init(CURL_GLOBAL_ALL);
-        init = true;
-    }
+    });
 }
 
-static int writer(char *data, size_t size, size_t nmemb, std::string *writerData)
+static size_t writer(char *data, size_t size, size_t nmemb, void *userdata)
 {
+    auto *writerData = static_cast<std::string *>(userdata);
     if(writerData == nullptr)
         return 0;
 
     writerData->append(data, size*nmemb);
 
-    return static_cast<int>(size * nmemb);
+    return size * nmemb;
 }
 
-static int dummy_writer(char *, size_t size, size_t nmemb, void *)
+static size_t dummy_writer(char *, size_t size, size_t nmemb, void *)
 {
     /// dummy writer, do not save anything
-    return static_cast<int>(size * nmemb);
+    return size * nmemb;
 }
 
 //static int size_checker(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow)
@@ -230,15 +230,25 @@ static int curlGet(const FetchArgument &argument, FetchResult &result)
         break;
     }
 
-    unsigned int fail_count = 0, max_fails = 1;
-    while(true)
+    // Retrying a read must not append a partial response to the next attempt.
+    const unsigned int attempts = argument.method == HTTP_GET || argument.method == HTTP_HEAD ? 2 : 1;
+    result.complete = false;
+    for(unsigned int attempt = 0; attempt < attempts; ++attempt)
     {
+        if(data)
+            data->clear();
+        if(result.response_headers)
+            result.response_headers->clear();
+        if(result.cookies)
+            result.cookies->clear();
         retVal = curl_easy_perform(curl_handle);
-        if(retVal == CURLE_OK || max_fails <= fail_count || global.APIMode)
+        if(retVal == CURLE_OK)
             break;
-        else
-            fail_count++;
+        writeLog(0, "Download attempt " + std::to_string(attempt + 1) + " failed: " +
+                 curl_easy_strerror(static_cast<CURLcode>(retVal)) + "; received " +
+                 std::to_string(data ? data->size() : 0) + " bytes.", LOG_LEVEL_WARNING);
     }
+    result.complete = retVal == CURLE_OK;
 
     long code = 0;
     curl_easy_getinfo(curl_handle, CURLINFO_HTTP_CODE, &code);
@@ -333,14 +343,21 @@ std::string webGet(const std::string &url, const std::string &proxy, unsigned in
             writeLog(0, "CACHE NOT EXIST: '" + url + "', creating new cache.");
         //content = curlGet(url, proxy, response_headers, return_code); // try to fetch data
         curlGet(argument, fetch_res);
-        if(return_code == 200) // success, save new cache
+        if(fetch_res.complete && return_code == 200 && !content.empty())
         {
             //guarded_mutex guard(cache_rw_lock);
             cache_rw_lock.writeLock();
             defer(cache_rw_lock.writeUnlock();)
-            fileWrite(path, content, true);
-            if(response_headers)
-                fileWrite(path_header, *response_headers, true);
+            // Publish only a complete file; a failed write leaves the old cache intact.
+            if(fileWriteAtomic(path, content) != 0)
+                writeLog(0, "Failed to publish downloaded cache file.", LOG_LEVEL_ERROR);
+            else if(response_headers)
+            {
+                if(fileWriteAtomic(path_header, *response_headers) != 0)
+                    writeLog(0, "Failed to publish cached response headers.", LOG_LEVEL_ERROR);
+            }
+            else
+                std::remove(path_header.c_str());
         }
         else
         {
