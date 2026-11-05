@@ -2,6 +2,8 @@
 
 在各种订阅格式之间进行转换的实用程序.
 
+此 fork 的定制开发在 `dev` 分支，`master` 仅同步上游。分支用途、同步和构建方式见 [分支维护说明](BRANCHING.md)。
+
 [![Build Status](https://github.com/tindy2013/subconverter/actions/workflows/build.yml/badge.svg)](https://github.com/tindy2013/subconverter/actions)
 [![GitHub tag (latest SemVer)](https://img.shields.io/github/tag/tindy2013/subconverter.svg)](https://github.com/tindy2013/subconverter/tags)
 [![GitHub release](https://img.shields.io/github/release/tindy2013/subconverter.svg)](https://github.com/tindy2013/subconverter/releases)

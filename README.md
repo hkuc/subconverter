@@ -2,6 +2,8 @@
 
 Utility to convert between various proxy subscription formats.
 
+This fork keeps custom changes on `dev`; `master` mirrors upstream. See [branch maintenance](BRANCHING.md) for the workflow and source build instructions.
+
 [![Build Status](https://github.com/tindy2013/subconverter/actions/workflows/build.yml/badge.svg)](https://github.com/tindy2013/subconverter/actions)
 [![GitHub tag (latest SemVer)](https://img.shields.io/github/tag/tindy2013/subconverter.svg)](https://github.com/tindy2013/subconverter/tags)
 [![GitHub release](https://img.shields.io/github/release/tindy2013/subconverter.svg)](https://github.com/tindy2013/subconverter/releases)

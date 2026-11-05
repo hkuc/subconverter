@@ -1,0 +1,36 @@
+name: Download and cache regression
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - 'src/handler/**'
+      - 'src/utils/**'
+      - 'include/**'
+      - 'tests/**'
+      - '.github/workflows/download-regression.yml'
+  pull_request:
+    branches: [dev]
+    paths:
+      - 'src/handler/**'
+      - 'src/utils/**'
+      - 'include/**'
+      - 'tests/**'
+      - '.github/workflows/download-regression.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  download-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y cmake g++ python3 libcurl4-openssl-dev libyaml-cpp-dev rapidjson-dev
+      - name: Build regression driver
+        run: cmake -S tests -B build/download-tests -DCMAKE_BUILD_TYPE=Debug && cmake --build build/download-tests -j2
+      - name: Test interrupted downloads and cache writes
+        run: ctest --test-dir build/download-tests --output-on-failure
